@@ -1,0 +1,28 @@
+Provides a class which can provide decoded keys to client applications.
+These keys may be useful for OAuth2 sign-on process flows, for example.
+
+Note that this does NOT provide security; it exists to separate the
+provision of encoded keys from client application code.  The static
+stored keys should be provided as:
+
+/usr/share/libsailfishkeyprovider/storedkeys.ini
+
+Example of usage:
+
+@
+#include <sailfishkeyprovider.h>
+
+char *buf = NULL;
+int success = SailfishKeyProvider_storedKey(
+                "twitter",
+                "twitter-sync",
+                "consumer_key",
+                &buf);
+/* use key in OAuth2 flow */
+free(buf);
+@
+
+Parameters are:
+    - provider name (from /usr/share/accounts/providers/ description file)
+    - service name (from /usr/share/accounts/services/ description file)
+    - key name (required for OAuth2 flow)
