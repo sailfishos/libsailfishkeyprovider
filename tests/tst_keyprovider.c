@@ -11,9 +11,9 @@
 #include "base64ed.h"
 #include "xored.h"
 
-#define TEST_FAIL 0
-#define TEST_PASS 1
-#define TEST_SKIP 2
+#define TEST_PASS 0
+#define TEST_SKIP 1
+#define TEST_FAIL 2
 
 int test_b64_encode();
 int test_b64_decode();
@@ -61,8 +61,8 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < testCount; ++i) {
         switch (results[i]) {
-            case TEST_SKIP: skipCount++; break;
             case TEST_PASS: passCount++; break;
+            case TEST_SKIP: skipCount++; break;
             case TEST_FAIL: failCount++; break;
             default: {
                 fprintf(stderr,
@@ -84,8 +84,8 @@ int main(int argc, char *argv[])
     }
 
     if (failCount == 0)
-        return 0;
-    return -1;
+        return TEST_PASS;
+    return TEST_FAIL;
 }
 
 int test_b64_encode()
