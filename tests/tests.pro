@@ -9,4 +9,8 @@ OBJECTS_DIR = $$PWD/../.obj
 
 include($$PWD/../lib/lib.pri)
 SOURCES += tst_keyprovider.c
-INSTALLS += target
+
+test_xml.files = tests.xml
+test_xml.path = $$TARGETPATH
+
+INSTALLS += target test_xml

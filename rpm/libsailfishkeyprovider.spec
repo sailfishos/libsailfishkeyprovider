@@ -1,6 +1,6 @@
 Name: libsailfishkeyprovider
 License: LGPLv2.1
-Version: 0.0.9
+Version: 0.0.10
 Release: 1
 Source0: %{name}-%{version}.tar.bz2
 Summary: Library providing access to decoded OAuth2 keys
@@ -36,6 +36,7 @@ Requires: %{name} = %{version}-%{release}
 
 %files tests
 /opt/tests/libsailfishkeyprovider/tst_keyprovider
+/opt/tests/libsailfishkeyprovider/tests.xml
 
 %prep
 %setup -q -n %{name}-%{version}
