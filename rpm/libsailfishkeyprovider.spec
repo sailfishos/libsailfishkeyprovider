@@ -42,6 +42,16 @@ Requires: blts-tools
 %prep
 %setup -q -n %{name}-%{version}
 
+
+%package keygen
+Summary:  Encoding utility for API keys
+
+%description keygen
+Better than modify the source code of and then running unit tests.
+
+%files keygen
+%{_bindir}/sailfish-keyprovider-keygen
+
 %build
 %qmake5
 make

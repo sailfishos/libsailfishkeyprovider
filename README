@@ -26,3 +26,22 @@ Parameters are:
     - provider name (from /usr/share/accounts/providers/ description file)
     - service name (from /usr/share/accounts/services/ description file)
     - key name (required for OAuth2 flow)
+
+
+===================
+GENERATING NEW KEYS
+===================
+
+For your added convenience of not having to edit and recompile unit tests
+just to generate some encrypted keys, this now builds an utility:
+
+    $ sailfish-keyprovider-keygen xor Secret ClientID
+                                   ^    ^        ^
+                                  /      \        \
+                             method   encryption   \
+                                         key     value to be obfuscated
+
+    generate_keys:
+        input: ClientID
+        encoded: 0 EAkKFwsAGiE=
+        roundtrip: 0 ClientID

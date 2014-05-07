@@ -1,2 +1,2 @@
 TEMPLATE=subdirs
-SUBDIRS=lib tests
+SUBDIRS=lib src tests
