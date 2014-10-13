@@ -30,6 +30,7 @@ Requires: %{name} = %{version}-%{release}
 Summary:  Tests for libsailfishkeyprovider
 Group:    System/Libraries
 Requires: %{name} = %{version}-%{release}
+Requires: blts-tools
 
 %description tests
 %{summary}.
