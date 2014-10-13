@@ -5,7 +5,7 @@
        <set name="unit-tests" feature="libsailfishkeyprovider-tests">
            <description>Correctness automatic tests</description>
            <case manual="false" name="tst_keyprovider">
-               <step>/opt/tests/libsailfishkeyprovider/tst_keyprovider</step>
+               <step>/usr/sbin/run-blts-root /opt/tests/libsailfishkeyprovider/tst_keyprovider</step>
            </case>
        </set>
    </suite>
