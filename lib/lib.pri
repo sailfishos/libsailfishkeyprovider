@@ -4,9 +4,9 @@ INCLUDEPATH += \
 
 HEADERS += \
     $$PWD/include/sailfishkeyprovider.h \
+    $$PWD/include/sailfishkeyprovider_iniparser.h \
     $$PWD/src/base64ed.h \
-    $$PWD/src/xored.h \
-    $$PWD/sec/iniparser.h
+    $$PWD/src/xored.h
 
 SOURCES += \
     $$PWD/src/sailfishkeyprovider.c \
