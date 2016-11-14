@@ -26,7 +26,6 @@
 
 #include "base64ed.h"
 #include "xored.h"
-#include "iniparser.h"
 
 #include <stdint.h>
 #include <stdlib.h>

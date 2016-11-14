@@ -53,6 +53,41 @@ int SailfishKeyProvider_encodeKey(
                     const char * encodingScheme,
                     const char * encodingKey,
                     char ** encodedKey);
+
+// .ini parser routines, offered as public API for convenience
+char ** SailfishKeyProvider_ini_sections(
+                    const char * filename);
+
+char ** SailfishKeyProvider_ini_keys(
+                    const char * filename,
+                    const char * section);
+
+char * SailfishKeyProvider_ini_read(
+                    const char * filename,
+                    const char * section,
+                    const char * key);
+
+char ** SailfishKeyProvider_ini_read_multiple(
+                    const char * filename,
+                    const char * section,
+                    const char * keys,
+                    const char * separator);
+
+int SailfishKeyProvider_ini_write(
+                    const char * directory,
+                    const char * filename, /* must include full path */
+                    const char * section,
+                    const char * key,
+                    const char * value);
+
+int SailfishKeyProvider_ini_write_multiple(
+                    const char * directory,
+                    const char * filename, /* must include full path */
+                    const char * section,
+                    const char * keys,
+                    const char * values,
+                    const char * separator);
+
 #ifdef __cplusplus
 }
 #endif

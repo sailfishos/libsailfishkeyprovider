@@ -31,7 +31,7 @@
     It does not handle repeated sections.
 */
 
-#include "iniparser.h"
+#include "sailfishkeyprovider.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -67,11 +67,71 @@ static const char * error_messages[] = {
 void free_list_and_content(char **list)
 {
     int i = 0;
-    for (i = 0; list[i] != NULL; ++i) {
-        free(list[i]);
+    if (list != NULL) {
+        for (i = 0; list[i] != NULL; ++i) {
+            free(list[i]);
+        }
+        free(list);
+        list = NULL;
     }
-    free(list);
-    list = NULL;
+}
+
+void free_array_and_content(char **array, int count)
+{
+    int i = 0;
+    if (array != NULL) {
+        for (i = 0; i < count; ++i) {
+            free(array[i]);
+        }
+        free(array);
+        array = NULL;
+    }
+}
+
+char ** split_string_into_array(
+        const char * string,
+        const char * separator,
+        int * count)
+{
+    size_t allocated = 1;
+    char **tokens = NULL;
+    char *tofree = NULL;
+    char *remainder = NULL;
+    char *token = NULL;
+
+    if (string == NULL || separator == NULL) {
+        return NULL;
+    }
+
+    tokens = calloc(allocated, sizeof(char*));
+    if (tokens == NULL) {
+        return NULL;
+    }
+
+    tofree = strdup(string);
+    if (tofree == NULL) {
+        free_array_and_content(tokens, allocated);
+        return NULL;
+    }
+
+    *count = 0;
+    remainder = tofree;
+    while ((token = strsep(&remainder, separator)) != NULL) {
+        if (*count == (int)allocated) {
+            allocated += 1;
+            tokens = realloc(tokens, allocated * sizeof(char*));
+        }
+        tokens[*count] = strdup(token);
+        *count += 1;
+    }
+
+    if (*count == 0) {
+        free(tokens);
+        tokens = NULL;
+    }
+
+    free(tofree);
+    return tokens;
 }
 
 char * ini_read_line(FILE *stream, int *info)
@@ -593,6 +653,7 @@ char * SailfishKeyProvider_ini_read(
                     const char * section,
                     const char * key)
 {
+    char *retn = NULL;
     FILE *stream = NULL;
     int info = INFO_OK;
 
@@ -611,7 +672,7 @@ char * SailfishKeyProvider_ini_read(
         return NULL;
     }
 
-    char *retn = ini_read_value(stream, section, key, &info);
+    retn = ini_read_value(stream, section, key, &info);
     if (info != INFO_OK) {
         fprintf(stderr,
                 "SailfishKeyProvider_ini_read: %s\n",
@@ -624,6 +685,73 @@ char * SailfishKeyProvider_ini_read(
                 "error closing ini file");
     }
     return retn;
+}
+
+char ** SailfishKeyProvider_ini_read_multiple(
+                    const char * filename,
+                    const char * section,
+                    const char * keys,
+                    const char * separator)
+{
+    FILE *stream = NULL;
+    int info = INFO_OK;
+    int k = 0;
+    int numKeys = 0;
+    size_t allocated = 1;
+    char **splitKeys = NULL;
+    char **retnValues = NULL;
+
+    if (filename == NULL || keys == NULL || separator == NULL) {
+        fprintf(stderr,
+                "SailfishKeyProvider_ini_read_multiple: %s\n",
+                "invalid parameters");
+        return NULL;
+    }
+
+    splitKeys = split_string_into_array(keys, separator, &numKeys);
+    if (splitKeys == NULL) {
+        fprintf(stderr,
+                "SailfishKeyProvider_ini_read_multiple: %s\n",
+                "unable to parse keys parameter");
+        return NULL;
+    }
+
+    stream = fopen(filename, "r");
+    if (stream == NULL) {
+        fprintf(stderr,
+                "SailfishKeyProvider_ini_read_multiple: %s\n",
+                "unable to open file");
+        free_array_and_content(splitKeys, numKeys);
+        return NULL;
+    }
+
+    retnValues = calloc(allocated, sizeof(char*));
+    if (retnValues == NULL) {
+        fprintf(stderr,
+                "SailfishKeyProvider_ini_read_multiple: %s\n",
+                "unable to allocate values array");
+    } else {
+        for (k = 0; k < numKeys; ++k) {
+            if (k == (int)allocated) {
+                allocated += 1;
+                retnValues = realloc(retnValues, allocated * sizeof(char*));
+            }
+            retnValues[k] = ini_read_value(stream, section, splitKeys[k], &info);
+            if (info != INFO_OK) {
+                fprintf(stderr,
+                        "SailfishKeyProvider_ini_read_multiple: %s\n",
+                        error_messages[info]);
+            }
+        }
+    }
+
+    if (fclose(stream) != 0) {
+        fprintf(stderr,
+                "SailfishKeyProvider_ini_read_multiple: %s\n",
+                "error closing ini file");
+    }
+    free_array_and_content(splitKeys, numKeys);
+    return retnValues;
 }
 
 #define APPEND_NEWLINE_TO_BUF(buf)                                         \
@@ -678,16 +806,19 @@ char * SailfishKeyProvider_ini_read(
         buf[startOfNewSpace+sizeOfNewSpace-1] = '\0';                      \
     } while (0)
 
-int SailfishKeyProvider_ini_write(
+int SailfishKeyProvider_ini_write_multiple_impl(
                     const char * directory,
                     const char * filename, /* must contain full path */
                     const char * section,
-                    const char * key,
-                    const char * value)
+                    const char * keys,     /* separator-separated list of keys */
+                    const char * values,   /* separator-separated list of values */
+                    const char * separator)/* if null, assume single key/value */
 {
     int createFd = -1;
     int info = INFO_OK;
-    int i = 0, j = 0;
+    int i = 0, j = 0, k = 0;
+    int numKeys = 0;
+    int numValues = 0;
     int sectionFound = 0, thisSection = 0;
     int keyFound = 0;
     FILE *stream = NULL;
@@ -696,20 +827,38 @@ int SailfishKeyProvider_ini_write(
     char **existingSections = NULL;
     char *currSection = NULL;
     char *newFileData = NULL;
+    char **splitKeys = NULL;
+    char **splitValues = NULL;
 
-    if (filename == NULL || section == NULL || key == NULL || value == NULL) {
+    if (filename == NULL || section == NULL || keys == NULL || values == NULL) {
         fprintf(stderr,
-                "SailfishKeyProvider_ini_write: %s\n",
+                "SailfishKeyProvider_ini_write_multiple: %s\n",
                 "invalid parameters");
         return -1;
+    }
+
+    if (separator != NULL) {
+        splitKeys = split_string_into_array(keys, separator, &numKeys);
+        splitValues = split_string_into_array(values, separator, &numValues);
+        if (numKeys != numValues || numKeys <= 0) {
+            fprintf(stderr,
+                    "SailfishKeyProvider_ini_write_multiple: %s\n",
+                    "unable to parse keys and values, or count mismatch");
+            free_array_and_content(splitKeys, numKeys);
+            free_array_and_content(splitValues, numValues);
+            return -1;
+        }
     }
 
     /* allocate a buffer to which we'll write file data */
     newFileData = (char*)malloc(1);
     if (newFileData == NULL) {
         fprintf(stderr,
-                "SailfishKeyProvider_ini_write: %s\n",
+                "SailfishKeyProvider_ini_write_multiple: %s\n",
                 "unable to allocate file data buffer");
+        free_array_and_content(splitKeys, numKeys);
+        free_array_and_content(splitValues, numValues);
+        free(newFileData);
         return -1;
     }
     newFileData[0] = '\0';
@@ -719,8 +868,11 @@ int SailfishKeyProvider_ini_write(
         if (errno != EEXIST) {
             /* The directory does not exist, and we couldn't create it */
             fprintf(stderr,
-                    "SailfishKeyProvider_ini_write: %s\n",
+                    "SailfishKeyProvider_ini_write_multiple: %s\n",
                     "unable to create writable ini directory");
+            free_array_and_content(splitKeys, numKeys);
+            free_array_and_content(splitValues, numValues);
+            free(newFileData);
             return -1;
         }
         /* The directory already exists; continue as we were */
@@ -732,8 +884,11 @@ int SailfishKeyProvider_ini_write(
             /* The file does not exist, but we cannot create it.
              * This is probably a permissions error */
             fprintf(stderr,
-                    "SailfishKeyProvider_ini_write: %s\n",
+                    "SailfishKeyProvider_ini_write_multiple: %s\n",
                     "unable to create writable ini file");
+            free_array_and_content(splitKeys, numKeys);
+            free_array_and_content(splitValues, numValues);
+            free(newFileData);
             return -1;
         }
         /* The file exists, we didn't need to create it */
@@ -741,8 +896,11 @@ int SailfishKeyProvider_ini_write(
         /* having created the file, immediately close it */
         if (close(createFd) != 0) {
             fprintf(stderr,
-                    "SailfishKeyProvider_ini_write: %s\n",
+                    "SailfishKeyProvider_ini_write_multiple: %s\n",
                     "unable to close writable ini file after creating it");
+            free_array_and_content(splitKeys, numKeys);
+            free_array_and_content(splitValues, numValues);
+            free(newFileData);
             return -1;
         }
     }
@@ -753,22 +911,27 @@ int SailfishKeyProvider_ini_write(
     stream = fopen(filename, "r");
     if (stream == NULL) {
         fprintf(stderr,
-                "SailfishKeyProvider_ini_write: %s\n",
+                "SailfishKeyProvider_ini_write_multiple: %s\n",
                 "unable to open file for read");
+        free_array_and_content(splitKeys, numKeys);
+        free_array_and_content(splitValues, numValues);
+        free(newFileData);
         return -1;
     }
 
     existingSections = ini_read_sections(stream, &info);
     if (info != INFO_OK) {
         fprintf(stderr,
-                "SailfishKeyProvider_ini_write: %s\n",
+                "SailfishKeyProvider_ini_write_multiple: %s\n",
                 "unable to read existing sections");
-        free(newFileData);
         if (fclose(stream) != 0) {
             fprintf(stderr,
-                    "SailfishKeyProvider_ini_write: %s\n",
+                    "SailfishKeyProvider_ini_write_multiple: %s\n",
                     "error closing ini file");
         }
+        free_array_and_content(splitKeys, numKeys);
+        free_array_and_content(splitValues, numValues);
+        free(newFileData);
         return -1;
     }
 
@@ -786,37 +949,88 @@ int SailfishKeyProvider_ini_write(
         existingKeys = ini_read_keys(stream, currSection, &info);
         if (info != INFO_OK) {
             fprintf(stderr,
-                    "SailfishKeyProvider_ini_write: %s\n",
+                    "SailfishKeyProvider_ini_write_multiple: %s\n",
                     "unable to read existing keys");
-            free(newFileData);
-            free_list_and_content(existingSections);
             if (fclose(stream) != 0) {
                 fprintf(stderr,
-                        "SailfishKeyProvider_ini_write: %s\n",
+                        "SailfishKeyProvider_ini_write_multiple: %s\n",
                         "error closing ini file");
             }
+            free(newFileData);
+            free_list_and_content(existingSections);
+            free_array_and_content(splitKeys, numKeys);
+            free_array_and_content(splitValues, numValues);
             return -1;
         }
 
-        /* either overwrite the key/value, or just append it */
+        /* for each old key/value either overwrite the key/value with the new one,
+         * or just append that old key/value if no new key/value is given for it */
         currKey = existingKeys[0];
+        keyFound = 0;
         for (j = 1; currKey != NULL; ++j) {
-            if (thisSection == 1 && strcmp(currKey, key) == 0) {
-                /* we need to replace this key/value */
-                keyFound = 1;
-                APPEND_KEYVAL_TO_BUF(key, value, newFileData);
+            if (separator != NULL) {
+                /* multiple keys/values mode, the keys+values args are arrays */
+                for (k = 0; k != numKeys; ++k) {
+                    if (thisSection == 1 && strcmp(currKey, splitKeys[k]) == 0) {
+                        /* we need to replace this key/value with the new value */
+                        keyFound = 1;
+                        APPEND_KEYVAL_TO_BUF(currKey, splitValues[k], newFileData);
+                    }
+                }
+                if (!keyFound) {
+                    /* just append this pre-existing key/value */
+                    char *currVal = ini_read_value(stream, currSection, currKey, &info);
+                    APPEND_KEYVAL_TO_BUF(currKey, currVal, newFileData);
+                    free(currVal);
+                }
             } else {
-                /* just append it */
-                char *currVal = ini_read_value(stream, currSection, currKey, &info);
-                APPEND_KEYVAL_TO_BUF(currKey, currVal, newFileData);
-                free(currVal);
+                /* Single key/value mode, the keys+values args are single values */
+                if (thisSection == 1 && strcmp(currKey, keys) == 0) {
+                    /* we need to replace this key/value with the new value */
+                    keyFound = 1;
+                    APPEND_KEYVAL_TO_BUF(currKey, values, newFileData);
+                } else {
+                    /* just append this pre-existing key/value */
+                    char *currVal = ini_read_value(stream, currSection, currKey, &info);
+                    APPEND_KEYVAL_TO_BUF(currKey, currVal, newFileData);
+                    free(currVal);
+                }
             }
             currKey = existingKeys[j];
+            keyFound = 0;
         }
 
-        if (thisSection == 1 && keyFound == 0) {
-            /* reached the end of the section and haven't found key */
-            APPEND_KEYVAL_TO_BUF(key, value, newFileData);
+        /* then find any new key/value which isn't represented in the existingKeys
+         * and append it to the .ini file */
+        if (thisSection == 1) {
+            /* reached the end of the section and haven't found this new key/value; append it. */
+            if (separator != NULL) {
+                /* multiple key/values given, check whether each one exists */
+                for (k = 0; k != numKeys; ++k) {
+                    keyFound = 0;
+                    for (j = 0; existingKeys[j] != NULL; ++j) {
+                        if (strcmp(existingKeys[j], splitKeys[k]) == 0) {
+                            keyFound = 1;
+                            break;
+                        }
+                    }
+                    if (!keyFound) {
+                        APPEND_KEYVAL_TO_BUF(splitKeys[k], splitValues[k], newFileData);
+                    }
+                }
+            } else {
+                /* single key/value given, check whether it already exists */
+                keyFound = 0;
+                for (j = 0; existingKeys[j] != NULL; ++j) {
+                    if (strcmp(existingKeys[j], keys) == 0) {
+                        keyFound = 1;
+                        break;
+                    }
+                }
+                if (!keyFound) {
+                    APPEND_KEYVAL_TO_BUF(keys, values, newFileData);
+                }
+            }
         }
 
         free_list_and_content(existingKeys);
@@ -829,23 +1043,33 @@ int SailfishKeyProvider_ini_write(
     /* if the section doesn't already exist, we need to create it */
     if (sectionFound == 0) {
         APPEND_SECTION_TO_BUF(section, newFileData);
-        APPEND_KEYVAL_TO_BUF(key, value, newFileData);
+        if (separator != NULL) {
+            for (k = 0; k < numKeys; k++) {
+                APPEND_KEYVAL_TO_BUF(splitKeys[k], splitValues[k], newFileData);
+            }
+        } else {
+            APPEND_KEYVAL_TO_BUF(keys, values, newFileData);
+        }
     }
+
+    free_array_and_content(splitKeys, numKeys);
+    free_array_and_content(splitValues, numValues);
 
     /* now close the file, reopen in write mode, and write the new data */
     if (fclose(stream) != 0) {
         fprintf(stderr,
-                "SailfishKeyProvider_ini_write: %s\n",
+                "SailfishKeyProvider_ini_write_multiple: %s\n",
                 "error closing ini file prior to write");
+        free(newFileData);
         return -1;
     }
 
     stream = fopen(filename, "w");
     if (stream == NULL) {
-        free(newFileData);
         fprintf(stderr,
-                "SailfishKeyProvider_ini_write: %s\n",
+                "SailfishKeyProvider_ini_write_multiple: %s\n",
                 "error opening ini file in write mode");
+        free(newFileData);
         return -1;
     }
 
@@ -854,7 +1078,7 @@ int SailfishKeyProvider_ini_write(
 
     if (fclose(stream) != 0) {
         fprintf(stderr,
-                "SailfishKeyProvider_ini_write: %s\n",
+                "SailfishKeyProvider_ini_write_multiple: %s\n",
                 "error closing ini file after write");
         return -1;
     }
@@ -863,16 +1087,41 @@ int SailfishKeyProvider_ini_write(
     return 0;
 
 cleanup_and_return_malloc_fail:
+    free_array_and_content(splitKeys, numKeys);
+    free_array_and_content(splitValues, numValues);
     free_list_and_content(existingKeys);
     free_list_and_content(existingSections);
     free(newFileData);
     fprintf(stderr,
-            "SailfishKeyProvider_ini_write: %s\n",
+            "SailfishKeyProvider_ini_write_multiple: %s\n",
             "malloc failed during file regeneration");
     if (fclose(stream) != 0) {
         fprintf(stderr,
-                "SailfishKeyProvider_ini_write: %s\n",
+                "SailfishKeyProvider_ini_write_multiple: %s\n",
                 "error closing ini file after failed write");
     }
     return -1;
+}
+
+int SailfishKeyProvider_ini_write(
+                    const char * directory,
+                    const char * filename, /* must contain full path */
+                    const char * section,
+                    const char * key,
+                    const char * value)
+{
+    return SailfishKeyProvider_ini_write_multiple_impl(
+                directory, filename, section, key, value, NULL);
+}
+
+int SailfishKeyProvider_ini_write_multiple(
+                    const char * directory,
+                    const char * filename, /* must contain full path */
+                    const char * section,
+                    const char * keys,     /* separator-separated list of keys */
+                    const char * values,   /* separator-separated list of values */
+                    const char * separator)
+{
+    return SailfishKeyProvider_ini_write_multiple_impl(
+                directory, filename, section, keys, values, separator);
 }
