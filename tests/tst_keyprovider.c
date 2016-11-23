@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include "sailfishkeyprovider.h"
+#include "sailfishkeyprovider_iniparser.h"
 #include "base64ed.h"
 #include "xored.h"
 
@@ -15,6 +16,7 @@
 #define TEST_SKIP 1
 #define TEST_FAIL 2
 
+int test_ini_roundtrip();
 int test_b64_encode();
 int test_b64_decode();
 int test_b64_roundtrip();
@@ -43,8 +45,9 @@ int main(int argc, char *argv[])
     int passCount = 0, failCount = 0, skipCount = 0;
 
     int i = 0;
-    int testCount = 9;
+    int testCount = 10;
     int results[] = {
+        test_ini_roundtrip(),
         test_b64_encode(),
         test_b64_decode(),
         test_b64_roundtrip(),
@@ -86,6 +89,130 @@ int main(int argc, char *argv[])
     if (failCount == 0)
         return TEST_PASS;
     return TEST_FAIL;
+}
+
+int test_ini_roundtrip()
+{
+    char *readValue = NULL;
+    char **readValues = NULL;
+
+    if (SailfishKeyProvider_ini_write(
+                "/tmp",
+                "/tmp/tst_keyprovider.ini",
+                "testsection",
+                "testkey",
+                "testvalue") != 0) {
+        fprintf(stdout,
+                "%s\n",
+                "FAIL!    test_ini_roundtrip: unable to write single");
+        return TEST_FAIL;
+    }
+
+    if (SailfishKeyProvider_ini_write_multiple(
+                "/tmp",
+                "/tmp/tst_keyprovider.ini",
+                "testsection",
+                "k1,k2,k3",
+                "v1,v2,v3",
+                ",") != 0) {
+        fprintf(stdout,
+                "%s\n",
+                "FAIL!    test_ini_roundtrip: unable to write multiple");
+        return TEST_FAIL;
+    }
+
+    readValue = SailfishKeyProvider_ini_read(
+                "/tmp/tst_keyprovider.ini",
+                "testsection",
+                "testkey");
+    if (readValue == NULL) {
+        fprintf(stdout,
+                "%s\n",
+                "FAIL!    test_ini_roundtrip: unable to read single");
+        return TEST_FAIL;
+    } else if (strncmp(readValue, "testvalue", 9) != 0) {
+        free(readValue);
+        fprintf(stdout,
+                "%s\n",
+                "FAIL!    test_ini_roundtrip: read single value mismatch");
+        return TEST_FAIL;
+    }
+    free(readValue);
+
+    readValues = SailfishKeyProvider_ini_read_multiple(
+                "/tmp/tst_keyprovider.ini",
+                "testsection",
+                "k1,k2,k3",
+                ",");
+    if (readValues == NULL) {
+        fprintf(stdout,
+                "%s\n",
+                "FAIL!    test_ini_roundtrip: unable to read multiple");
+        return TEST_FAIL;
+    } else if (strncmp(readValues[0], "v1", 2) != 0
+            || strncmp(readValues[1], "v2", 2) != 0
+            || strncmp(readValues[2], "v3", 2) != 0) {
+        free(readValues[0]);
+        free(readValues[1]);
+        free(readValues[2]);
+        free(readValues);
+        fprintf(stdout,
+                "%s\n",
+                "FAIL!    test_ini_roundtrip: read multiple value mismatch");
+        return TEST_FAIL;
+    }
+    free(readValues[0]);
+    free(readValues[1]);
+    free(readValues[2]);
+    free(readValues);
+
+    if (SailfishKeyProvider_ini_write_multiple(
+                "/tmp",
+                "/tmp/tst_keyprovider.ini",
+                "testsection",
+                "k1,k2,k2.5,k3",
+                "v1;b,v2;b,v2.5;b,v3;b",
+                ",") != 0) {
+        fprintf(stdout,
+                "%s\n",
+                "FAIL!    test_ini_roundtrip: unable to write multiple #2");
+        return TEST_FAIL;
+    }
+
+    readValues = SailfishKeyProvider_ini_read_multiple(
+                "/tmp/tst_keyprovider.ini",
+                "testsection",
+                "k1,k2,k2.5,k3",
+                ",");
+    if (readValues == NULL) {
+        fprintf(stdout,
+                "%s\n",
+                "FAIL!    test_ini_roundtrip: unable to read multiple #2");
+        return TEST_FAIL;
+    } else if (strncmp(readValues[0], "v1;b", 4) != 0
+            || strncmp(readValues[1], "v2;b", 4) != 0
+            || strncmp(readValues[2], "v2.5;b", 6) != 0
+            || strncmp(readValues[3], "v3;b", 4) != 0) {
+        free(readValues[0]);
+        free(readValues[1]);
+        free(readValues[2]);
+        free(readValues[3]);
+        free(readValues);
+        fprintf(stdout,
+                "%s\n",
+                "FAIL!    test_ini_roundtrip: read multiple value mismatch");
+        return TEST_FAIL;
+    }
+    free(readValues[0]);
+    free(readValues[1]);
+    free(readValues[2]);
+    free(readValues[3]);
+    free(readValues);
+
+    fprintf(stdout,
+            "%s\n",
+            "PASS!    test_ini_roundtrip");
+    return TEST_PASS;
 }
 
 int test_b64_encode()

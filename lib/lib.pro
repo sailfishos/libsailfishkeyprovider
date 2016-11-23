@@ -11,7 +11,7 @@ OBJECTS_DIR = $$PWD/../.obj
 include($$PWD/lib.pri)
 
 includes.path = /usr/include/libsailfishkeyprovider
-includes.files = $$PWD/include/sailfishkeyprovider.h
+includes.files = $$PWD/include/sailfishkeyprovider.h $$PWD/include/sailfishkeyprovider_iniparser.h
 
 packageconfig.path = /usr/lib/pkgconfig
 packageconfig.files = $$PWD/pkgconfig/libsailfishkeyprovider.pc

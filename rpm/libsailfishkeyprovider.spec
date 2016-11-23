@@ -24,6 +24,7 @@ Requires: %{name} = %{version}-%{release}
 %files devel
 %{_libdir}/libsailfishkeyprovider.so
 %{_includedir}/libsailfishkeyprovider/sailfishkeyprovider.h
+%{_includedir}/libsailfishkeyprovider/sailfishkeyprovider_iniparser.h
 %{_libdir}/pkgconfig/libsailfishkeyprovider.pc
 
 %package tests

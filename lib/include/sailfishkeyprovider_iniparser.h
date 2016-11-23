@@ -22,8 +22,8 @@
 **
 ****************************************************************************/
 
-#ifndef INIPARSER_H
-#define INIPARSER_H
+#ifndef SAILFISHKEYPROVIDER_INIPARSER_H
+#define SAILFISHKEYPROVIDER_INIPARSER_H
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -43,14 +43,28 @@ char * SailfishKeyProvider_ini_read(
                     const char * section,
                     const char * key);
 
+char ** SailfishKeyProvider_ini_read_multiple(
+                    const char * filename,
+                    const char * section,
+                    const char * keys,
+                    const char * separator);
+
 int SailfishKeyProvider_ini_write(
                     const char * directory,
                     const char * filename, /* must include full path */
                     const char * section,
                     const char * key,
                     const char * value);
+
+int SailfishKeyProvider_ini_write_multiple(
+                    const char * directory,
+                    const char * filename, /* must include full path */
+                    const char * section,
+                    const char * keys,
+                    const char * values,
+                    const char * separator);
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* INIPARSER_H */
+#endif /* SAILFISHKEYPROVIDER_INIPARSER_H */
