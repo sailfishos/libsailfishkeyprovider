@@ -11,7 +11,10 @@ OBJECTS_DIR = $$PWD/../.obj
 include($$PWD/lib.pri)
 
 includes.path = /usr/include/libsailfishkeyprovider
-includes.files = $$PWD/include/sailfishkeyprovider.h $$PWD/include/sailfishkeyprovider_iniparser.h
+includes.files = \
+    $$PWD/include/sailfishkeyprovider.h \
+    $$PWD/include/sailfishkeyprovider_iniparser.h \
+    $$PWD/include/sailfishkeyprovider_processmutex.h
 
 packageconfig.path = /usr/lib/pkgconfig
 packageconfig.files = $$PWD/pkgconfig/libsailfishkeyprovider.pc
