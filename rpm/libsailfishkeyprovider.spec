@@ -25,6 +25,7 @@ Requires: %{name} = %{version}-%{release}
 %{_libdir}/libsailfishkeyprovider.so
 %{_includedir}/libsailfishkeyprovider/sailfishkeyprovider.h
 %{_includedir}/libsailfishkeyprovider/sailfishkeyprovider_iniparser.h
+%{_includedir}/libsailfishkeyprovider/sailfishkeyprovider_processmutex.h
 %{_libdir}/pkgconfig/libsailfishkeyprovider.pc
 
 %package tests
@@ -60,14 +61,5 @@ make
 %install
 %qmake5_install
 
-%post
-/sbin/ldconfig
-
-%postun
-/sbin/ldconfig
-
-%post devel
-/sbin/ldconfig
-
-%postun devel
-/sbin/ldconfig
+%post -p /sbin/ldconfig
+%postun -p /sbin/ldconfig
