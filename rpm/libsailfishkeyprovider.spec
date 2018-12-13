@@ -55,7 +55,7 @@ Better than modify the source code of and then running unit tests.
 %{_bindir}/sailfish-keyprovider-keygen
 
 %build
-%qmake5
+%qmake5 "VERSION=%{version}"
 make
 
 %install
