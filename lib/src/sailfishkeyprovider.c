@@ -33,8 +33,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#define STOREDKEYS_WRITABLE_DIRECTORY "/home/nemo/.local/share/system/privileged/Keys"
-#define STOREDKEYS_WRITABLE_INIFILE "/home/nemo/.local/share/system/privileged/Keys/storedkeys.ini"
+#define STOREDKEYS_WRITABLE_DIRECTORY "%s/.local/share/system/privileged/Keys"
+#define STOREDKEYS_WRITABLE_INIFILE "%s/.local/share/system/privileged/Keys/storedkeys.ini"
 #define STOREDKEYS_STATIC_INIFILE "/usr/share/libsailfishkeyprovider/storedkeys.ini"
 #define STOREDKEYS_ENCODINGSECTION "encoding"
 #define STOREDKEYS_ENCODEDKEYSSECTION "encodedkeys"
@@ -239,6 +239,8 @@ int SailfishKeyProvider_storedKey(
                     const char * keyName,
                     char ** storedKey)
 {
+    char writableIniFile[1024];
+
     /* "provider/service", "provider/service/scheme", "provider/service/key" */
     char *psKey = NULL;
     char *psSchemeKey = NULL;
@@ -289,27 +291,31 @@ int SailfishKeyProvider_storedKey(
     psKeyName = build_ini_entry_key(psKey, keyName);
     pKeyName = build_ini_entry_key(providerName, keyName);
 
+    snprintf(writableIniFile, sizeof(writableIniFile),
+             STOREDKEYS_WRITABLE_INIFILE,
+             getenv("HOME"));
+
     /* read the decoding scheme and the decoding key from .ini file */
     decodingScheme = SailfishKeyProvider_ini_read(
-                                        STOREDKEYS_WRITABLE_INIFILE,
+                                        writableIniFile,
                                         STOREDKEYS_ENCODINGSECTION,
                                         psSchemeKey);
     if (decodingScheme == NULL) {
         /* try the fallback key. */
         decodingScheme = SailfishKeyProvider_ini_read(
-                                        STOREDKEYS_WRITABLE_INIFILE,
+                                        writableIniFile,
                                         STOREDKEYS_ENCODINGSECTION,
                                         pSchemeKey);
     }
 
     decodingKey = SailfishKeyProvider_ini_read(
-                                        STOREDKEYS_WRITABLE_INIFILE,
+                                        writableIniFile,
                                         STOREDKEYS_ENCODINGSECTION,
                                         psKeyKey);
     if (decodingKey == NULL) {
         /* try the fallback key. */
         decodingKey = SailfishKeyProvider_ini_read(
-                                        STOREDKEYS_WRITABLE_INIFILE,
+                                        writableIniFile,
                                         STOREDKEYS_ENCODINGSECTION,
                                         pKeyKey);
     }
@@ -368,13 +374,13 @@ int SailfishKeyProvider_storedKey(
 
     /* now read the encoded key value for the given keyName from the ini */
     encodedKeyValue = SailfishKeyProvider_ini_read(
-                                        whichIni ? STOREDKEYS_STATIC_INIFILE : STOREDKEYS_WRITABLE_INIFILE,
+                                        whichIni ? STOREDKEYS_STATIC_INIFILE : writableIniFile,
                                         STOREDKEYS_ENCODEDKEYSSECTION,
                                         psKeyName);
     if (encodedKeyValue == NULL) {
         /* try the fallback key. */
         encodedKeyValue = SailfishKeyProvider_ini_read(
-                                        whichIni ? STOREDKEYS_STATIC_INIFILE : STOREDKEYS_WRITABLE_INIFILE,
+                                        whichIni ? STOREDKEYS_STATIC_INIFILE : writableIniFile,
                                         STOREDKEYS_ENCODEDKEYSSECTION,
                                         pKeyName);
     }
@@ -433,6 +439,8 @@ int SailfishKeyProvider_storeKey(
     char *psSchemeKey = NULL;
     char *psKeyKey = NULL;
     char *pskKey = NULL;
+    char writableDirectory[1024];
+    char writableIniFile[1024];
 
     if (providerName == NULL
             || serviceName == NULL
@@ -451,10 +459,17 @@ int SailfishKeyProvider_storeKey(
     psKeyKey = build_ini_entry_key(psKey, STOREDKEYS_ENCODINGSECTION_KEY);
     pskKey = build_ini_entry_key(psKey, encodedKeyName);
 
+    snprintf(writableDirectory, sizeof(writableDirectory),
+             STOREDKEYS_WRITABLE_DIRECTORY,
+             getenv("HOME"));
+    snprintf(writableIniFile, sizeof(writableIniFile),
+             STOREDKEYS_WRITABLE_INIFILE,
+             getenv("HOME"));
+
     /* write the encoding scheme */
     retn = SailfishKeyProvider_ini_write(
-                    STOREDKEYS_WRITABLE_DIRECTORY,
-                    STOREDKEYS_WRITABLE_INIFILE,
+                    writableDirectory,
+                    writableIniFile,
                     STOREDKEYS_ENCODINGSECTION,
                     psSchemeKey,
                     encodingScheme);
@@ -467,8 +482,8 @@ int SailfishKeyProvider_storeKey(
 
     /* write the encoding key */
     retn = SailfishKeyProvider_ini_write(
-                    STOREDKEYS_WRITABLE_DIRECTORY,
-                    STOREDKEYS_WRITABLE_INIFILE,
+                    writableDirectory,
+                    writableIniFile,
                     STOREDKEYS_ENCODINGSECTION,
                     psKeyKey,
                     encodingKey);
@@ -481,8 +496,8 @@ int SailfishKeyProvider_storeKey(
 
     /* write the encoded key value */
     retn = SailfishKeyProvider_ini_write(
-                    STOREDKEYS_WRITABLE_DIRECTORY,
-                    STOREDKEYS_WRITABLE_INIFILE,
+                    writableDirectory,
+                    writableIniFile,
                     STOREDKEYS_ENCODEDKEYSSECTION,
                     pskKey,
                     encodedValue);
