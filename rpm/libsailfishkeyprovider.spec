@@ -1,5 +1,6 @@
-Name: libsailfishkeyprovider
-License: LGPLv2.1
+Name:    libsailfishkeyprovider
+License: LGPLv2
+URL:     https://git.sailfishos.org/mer-core/libsailfishkeyprovider
 Version: 1.0.1
 Release: 1
 Source0: %{name}-%{version}.tar.bz2
