@@ -32,9 +32,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <dirent.h>
 
 #define STOREDKEYS_WRITABLE_DIRECTORY "%s/.local/share/system/privileged/Keys"
 #define STOREDKEYS_WRITABLE_INIFILE "%s/.local/share/system/privileged/Keys/storedkeys.ini"
+#define STOREDKEYS_STATIC_CONFIG_DIR "/usr/share/libsailfishkeyprovider/storedkeys.d/"
 #define STOREDKEYS_STATIC_INIFILE "/usr/share/libsailfishkeyprovider/storedkeys.ini"
 #define STOREDKEYS_ENCODINGSECTION "encoding"
 #define STOREDKEYS_ENCODEDKEYSSECTION "encodedkeys"
@@ -58,6 +60,54 @@ char * build_ini_entry_key(const char *first, const char *second)
     retn[firstLength] = '/';
     retn[firstLength+secondLength+1] = '\0';
     return retn;
+}
+
+/* Try decode scheme from file*/
+void try_read_decoding_scheme(const char *path, const char *psSchemeKey, const char *pSchemeKey, char** scheme)
+{
+    *scheme = SailfishKeyProvider_ini_read(
+                path,
+                STOREDKEYS_ENCODINGSECTION,
+                psSchemeKey);
+    if (*scheme == NULL) {
+        /* try the fallback key. */
+        *scheme = SailfishKeyProvider_ini_read(
+                    path,
+                    STOREDKEYS_ENCODINGSECTION,
+                    pSchemeKey);
+    }
+}
+
+/* Try decode key form file*/
+void try_read_decoding_key(const char *path, const char *psKeyKey, const char *pKeyKey, char** key)
+{
+    *key = SailfishKeyProvider_ini_read(
+                path,
+                STOREDKEYS_ENCODINGSECTION,
+                psKeyKey);
+    if (*key == NULL) {
+        /* try the fallback key. */
+        *key = SailfishKeyProvider_ini_read(
+                    path,
+                    STOREDKEYS_ENCODINGSECTION,
+                    pKeyKey);
+    }
+}
+
+/* Try read key form file*/
+void try_read_encoded_key(const char *path, const char *psKeyName, const char *pKeyName, char** key)
+{
+    *key = SailfishKeyProvider_ini_read(
+                path,
+                STOREDKEYS_ENCODEDKEYSSECTION,
+                psKeyName);
+    if (*key == NULL) {
+        /* try the fallback key. */
+        *key = SailfishKeyProvider_ini_read(
+                    path,
+                    STOREDKEYS_ENCODEDKEYSSECTION,
+                    pKeyName);
+    }
 }
 
 /*
@@ -321,6 +371,27 @@ int SailfishKeyProvider_storedKey(
     }
 
     if (decodingScheme == NULL || decodingKey == NULL) {
+        DIR *dir;
+        struct dirent *ent;
+        if ((dir = opendir (STOREDKEYS_STATIC_CONFIG_DIR)) != NULL) {
+            /* print all the files and directories within directory */
+            while ((ent = readdir (dir)) != NULL) {
+                char path[PATH_MAX] = "";
+                strcat(path, STOREDKEYS_STATIC_CONFIG_DIR);
+                strcat(path, ent->d_name);
+
+                try_read_decoding_scheme(path, psSchemeKey, pSchemeKey, &decodingScheme);
+                try_read_decoding_key(path, psKeyKey, pKeyKey, &decodingKey);
+
+                if (decodingScheme || decodingKey) {
+                    break;
+                }
+            }
+            closedir (dir);
+        }
+    }
+
+    if (decodingScheme == NULL || decodingKey == NULL) {
         /* even the fallback keys were empty.  Try reading from the static .ini file */
         decodingScheme = SailfishKeyProvider_ini_read(
                                             STOREDKEYS_STATIC_INIFILE,
@@ -383,6 +454,26 @@ int SailfishKeyProvider_storedKey(
                                         whichIni ? STOREDKEYS_STATIC_INIFILE : writableIniFile,
                                         STOREDKEYS_ENCODEDKEYSSECTION,
                                         pKeyName);
+    }
+
+    if (encodedKeyValue == NULL) {
+        DIR *dir;
+        struct dirent *ent;
+        if ((dir = opendir (STOREDKEYS_STATIC_CONFIG_DIR)) != NULL) {
+            /* print all the files and directories within directory */
+            while ((ent = readdir (dir)) != NULL) {
+                char path[PATH_MAX] = "";
+                strcat(path, STOREDKEYS_STATIC_CONFIG_DIR);
+                strcat(path, ent->d_name);
+
+                try_read_encoded_key(path, psKeyName, pKeyName, &encodedKeyValue);
+
+                if (encodedKeyValue) {
+                    break;
+                }
+            }
+            closedir (dir);
+        }
     }
 
     if (encodedKeyValue == NULL) {
