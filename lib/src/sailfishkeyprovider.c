@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
+#include <limits.h>
 
 #define STOREDKEYS_WRITABLE_DIRECTORY "%s/.local/share/system/privileged/Keys"
 #define STOREDKEYS_WRITABLE_INIFILE "%s/.local/share/system/privileged/Keys/storedkeys.ini"
