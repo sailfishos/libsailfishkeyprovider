@@ -1,7 +1,7 @@
 TEMPLATE = lib
 TARGET = sailfishkeyprovider
 TARGET = $$qtLibraryTarget($$TARGET)
-TARGETPATH = /usr/lib
+TARGETPATH = $$[QT_INSTALL_LIBS]
 target.path = $$TARGETPATH
 
 CONFIG -= qt
@@ -17,7 +17,7 @@ includes.files = \
     $$PWD/include/sailfishkeyprovider_iniparser.h \
     $$PWD/include/sailfishkeyprovider_processmutex.h
 
-packageconfig.path = /usr/lib/pkgconfig
+packageconfig.path = $$[QT_INSTALL_LIBS]/pkgconfig
 packageconfig.files = $$PWD/pkgconfig/libsailfishkeyprovider.pc
 
 QMAKE_PKGCONFIG_NAME = lib$$TARGET
