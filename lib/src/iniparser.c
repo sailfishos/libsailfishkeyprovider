@@ -673,13 +673,13 @@ char * SailfishKeyProvider_ini_read(
     }
 
     retn = ini_read_value(stream, section, key, &info);
-    if (info != INFO_OK) {
+    if (info != INFO_OK && info != INFO_EOF) {
         fprintf(stderr,
                 "SailfishKeyProvider_ini_read: %s\n",
                 error_messages[info]);
     }
 
-    if(fclose(stream) != 0) {
+    if (fclose(stream) != 0) {
         fprintf(stderr,
                 "SailfishKeyProvider_ini_read: %s\n",
                 "error closing ini file");
