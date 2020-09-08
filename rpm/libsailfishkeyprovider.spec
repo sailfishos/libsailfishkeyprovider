@@ -5,7 +5,7 @@ Version: 1.0.1
 Release: 1
 Source0: %{name}-%{version}.tar.bz2
 Summary: Library providing access to decoded OAuth2 keys
-BuildRequires:  qt5-qmake
+BuildRequires:  pkgconfig(Qt5Core)
 
 %description
 %{summary}.
