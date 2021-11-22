@@ -1,6 +1,6 @@
 Name:    libsailfishkeyprovider
 License: LGPLv2
-URL:     https://git.sailfishos.org/mer-core/libsailfishkeyprovider
+URL:     https://github.com/sailfishos/libsailfishkeyprovider
 Version: 1.0.1
 Release: 1
 Source0: %{name}-%{version}.tar.bz2
@@ -11,11 +11,11 @@ BuildRequires:  pkgconfig(Qt5Core)
 %{summary}.
 
 %files
+%license license.lgpl
 %{_libdir}/libsailfishkeyprovider.so.*
 
 %package devel
 Summary:  Development package for libsailfishkeyprovider
-Group:    System/Libraries
 Requires: %{name} = %{version}-%{release}
 
 %description devel
@@ -30,7 +30,6 @@ Requires: %{name} = %{version}-%{release}
 
 %package tests
 Summary:  Tests for libsailfishkeyprovider
-Group:    System/Libraries
 Requires: %{name} = %{version}-%{release}
 Requires: blts-tools
 
@@ -56,7 +55,7 @@ Better than modify the source code of and then running unit tests.
 
 %build
 %qmake5 "VERSION=%{version}"
-make
+%make_build
 
 %install
 %qmake5_install
