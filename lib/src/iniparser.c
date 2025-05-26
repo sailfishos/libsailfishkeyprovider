@@ -601,6 +601,14 @@ char ** SailfishKeyProvider_ini_sections(
         return NULL;
     }
 
+    stream = fopen(filename, "r");
+    if (stream == NULL) {
+        fprintf(stderr,
+                "SailfishKeyProvider_ini_sections: %s\n",
+                "unable to open file");
+        return NULL;
+    }
+
     existingSections = ini_read_sections(stream, &info);
     if (info != INFO_OK) {
         fprintf(stderr,
@@ -629,6 +637,14 @@ char ** SailfishKeyProvider_ini_keys(
         fprintf(stderr,
                 "SailfishKeyProvider_ini_keys: %s\n",
                 "invalid parameters");
+        return NULL;
+    }
+
+    stream = fopen(filename, "r");
+    if (stream == NULL) {
+        fprintf(stderr,
+                "SailfishKeyProvider_ini_keys: %s\n",
+                "unable to open file");
         return NULL;
     }
 

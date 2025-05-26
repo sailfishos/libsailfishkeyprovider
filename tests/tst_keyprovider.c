@@ -27,7 +27,7 @@ int test_key_encdec_roundtrip();
 int test_stored_key();
 int test_store_key();
 
-int generate_keys();
+int generate_keys(int inputsSize, char *inputs[], char *encodingScheme, char *encodingKey);
 
 int main(int argc, char *argv[])
 {
